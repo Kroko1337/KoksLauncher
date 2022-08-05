@@ -1,16 +1,15 @@
 package software.schummel.launcher
 
 import com.sun.javafx.tk.Toolkit
-import javafx.scene.control.Button
-import javafx.scene.control.ChoiceBox
+import java.io.BufferedReader
 import java.io.File
-import java.io.FileNotFoundException
+import java.io.InputStreamReader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import javax.swing.JFrame
 import javax.swing.JOptionPane
 import kotlin.system.exitProcess
+
 
 var process: Process? = null
 
@@ -41,10 +40,19 @@ fun main(args: Array<String>) {
 fun run(version: Version) {
     val mcDir = File(System.getenv("APPDATA"), ".minecraft")
     val binDir = File(mcDir, "bin")
-    val dll = lookUp(binDir)!!
     val launcherDir = File(mcDir, "koks-launcher")
     if (!launcherDir.exists())
         launcherDir.mkdir()
+    val dll = File(launcherDir, "natives")
+    if(!dll.exists()) {
+        dll.mkdir();
+        val input = Version::class.java.getResourceAsStream("/natives") ?: throw RuntimeException("Cant find natives")
+        val reader = BufferedReader(InputStreamReader(input))
+        reader.lines().forEach { Version::class.java.getResourceAsStream("/natives/$it")
+            ?.let { it1 -> Files.copy(it1, File(dll, it).toPath(), StandardCopyOption.REPLACE_EXISTING) } }
+
+    }
+
     val libsDir = File(launcherDir, "libs")
     if (!libsDir.exists())
         libsDir.mkdir()
