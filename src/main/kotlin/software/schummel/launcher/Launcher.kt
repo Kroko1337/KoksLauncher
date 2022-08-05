@@ -1,14 +1,41 @@
 package software.schummel.launcher
 
+import com.sun.javafx.tk.Toolkit
+import javafx.scene.control.Button
+import javafx.scene.control.ChoiceBox
 import java.io.File
 import java.io.FileNotFoundException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import javax.swing.JFrame
+import javax.swing.JOptionPane
 import kotlin.system.exitProcess
 
+var process: Process? = null
+
 fun main(args: Array<String>) {
-    run(Version.V3)
+    val versions = ArrayList<String>()
+    Version.values().forEach {
+        versions.add(it.display)
+    }
+    val array = versions.toTypedArray()
+    val versionName = JOptionPane.showInputDialog(
+        null,
+        "Which version do you want to start?",
+        "Choose version",
+        JOptionPane.QUESTION_MESSAGE,
+        null,
+        array,
+        array[0]
+    ) as String
+    Version.values().filter { it.display == versionName }.forEach {
+        run(it)
+    }
+
+    Toolkit.getToolkit().addShutdownHook {
+        process?.destroy()
+    }
 }
 
 fun run(version: Version) {
@@ -16,29 +43,36 @@ fun run(version: Version) {
     val binDir = File(mcDir, "bin")
     val dll = lookUp(binDir)!!
     val launcherDir = File(mcDir, "koks-launcher")
-    if(!launcherDir.exists())
+    if (!launcherDir.exists())
         launcherDir.mkdir()
     val libsDir = File(launcherDir, "libs")
-    if(!libsDir.exists())
+    if (!libsDir.exists())
         libsDir.mkdir()
     val versionSaving = File(launcherDir, version.name)
-    if(!versionSaving.exists())
+    if (!versionSaving.exists())
         versionSaving.mkdirs()
 
     val clientJar = File(versionSaving, "client.dll")
 
-    if(!clientJar.exists()) {
+    if (!clientJar.exists()) {
         copyClientToLocation(version, clientJar.toPath())
     }
 
-    val libs = libsDir.listFiles()?.filter { it.extension == "jar" }?.joinToString(";") { it.absolutePath }.plus(clientJar.absolutePath)
+    val libs = libsDir.listFiles()?.filter { it.extension == "jar" }?.joinToString(";") { it.absolutePath }
+        .plus(clientJar.absolutePath)
 
-    val command = "\"java\" -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path=\"${dll.absolutePath}\" -classpath \"$libs\" -Xmx4G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:+DisableAttachMechanism -noverify net.minecraft.client.main.Main --version \"Koks\" --accessToken \"0\" --assetIndex \"1.8\" --gameDir \"${versionSaving.absolutePath}\" --assetsDir \"${File(mcDir, "assets").absolutePath}\""
+    val command =
+        "\"java\" -XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump -Djava.library.path=\"${dll.absolutePath}\" -classpath \"$libs\" -Xmx4G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:+DisableAttachMechanism -noverify net.minecraft.client.main.Main --version \"Koks\" --accessToken \"0\" --assetIndex \"1.8\" --gameDir \"${versionSaving.absolutePath}\" --assetsDir \"${
+            File(
+                mcDir,
+                "assets"
+            ).absolutePath
+        }\""
     val processBuilder = ProcessBuilder(command)
     processBuilder.redirectErrorStream(true)
     processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT)
-    val process = processBuilder.start()
-    process.waitFor()
+    process = processBuilder.start()
+    process?.waitFor()
 }
 
 fun copyClientToLocation(version: Version, path: Path) {
