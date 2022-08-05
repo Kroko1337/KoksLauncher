@@ -1,0 +1,5 @@
+/src/main/resources/clients/
+/src/main/resources/libs/
+target/
+.idea/
+KoksLauncher.iml
