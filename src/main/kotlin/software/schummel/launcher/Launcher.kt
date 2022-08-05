@@ -44,13 +44,15 @@ fun run(version: Version) {
     if (!launcherDir.exists())
         launcherDir.mkdir()
     val dll = File(launcherDir, "natives")
-    if(!dll.exists()) {
+    if(!dll.exists() || dll.listFiles()?.isEmpty() != false) {
         dll.mkdir();
-        val input = Version::class.java.getResourceAsStream("/natives") ?: throw RuntimeException("Cant find natives")
-        val reader = BufferedReader(InputStreamReader(input))
-        reader.lines().forEach { Version::class.java.getResourceAsStream("/natives/$it")
-            ?.let { it1 -> Files.copy(it1, File(dll, it).toPath(), StandardCopyOption.REPLACE_EXISTING) } }
-
+        val args = arrayListOf("lwjgl64.dll", "OpenAL64.dll")
+        for(line in args) {
+            println(line)
+            Version::class.java.getResourceAsStream("/natives/$line")
+                ?.let { it1 -> Files.copy(it1, File(dll, line).toPath(), StandardCopyOption.REPLACE_EXISTING) }
+        }
+        println("Trying to put all dll's to .minecraft")
     }
 
     val libsDir = File(launcherDir, "libs")
